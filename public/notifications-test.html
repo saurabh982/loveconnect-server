@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 Notification Test - Love Messages</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b9d, #c44569);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .device-selector {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .device-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .device-btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .device-btn.active {
+            background: #28a745;
+        }
+
+        .controls {
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        .notifications-container {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .notification-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .notification-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .app-name {
+            font-weight: bold;
+            color: #495057;
+            font-size: 16px;
+        }
+
+        .time {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .notification-content {
+            margin-bottom: 10px;
+        }
+
+        .title {
+            font-weight: 600;
+            color: #343a40;
+            margin-bottom: 5px;
+        }
+
+        .text {
+            color: #495057;
+            line-height: 1.4;
+        }
+
+        .notification-details {
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .detail-row {
+            margin: 2px 0;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .detail-value {
+            color: #6c757d;
+        }
+
+        .stats {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 0 0 15px 15px;
+            text-align: center;
+            color: #495057;
+        }
+
+        .whatsapp { border-left: 4px solid #25D366; }
+        .instagram { border-left: 4px solid #E4405F; }
+        .messenger { border-left: 4px solid #0084FF; }
+        .facebook { border-left: 4px solid #4267B2; }
+        .telegram { border-left: 4px solid #0088CC; }
+        .discord { border-left: 4px solid #7289DA; }
+        .snapchat { border-left: 4px solid #FFFC00; }
+        .sms { border-left: 4px solid #34C759; }
+        .other { border-left: 4px solid #8E8E93; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Notification Test Dashboard</h1>
+            <p>Real-time notification capture testing</p>
+        </div>
+
+        <div class="device-selector">
+            <h3>📲 Select Device:</h3>
+            <div id="deviceButtons"></div>
+        </div>
+
+        <div class="controls">
+            <button class="refresh-btn" onclick="loadNotifications()">🔄 Refresh Notifications</button>
+            <button class="refresh-btn" onclick="toggleAutoRefresh()">⏰ Auto Refresh: <span id="autoStatus">OFF</span></button>
+            <span id="notificationCount">Loading...</span>
+        </div>
+
+        <div class="notifications-container" id="notificationsContainer">
+            <p>Loading notifications...</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <p>📊 Notification Statistics</p>
+        </div>
+    </div>
+
+    <script>
+        let selectedDevice = null;
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+
+        async function loadDevices() {
+            try {
+                const response = await fetch('/api/devices');
+                const devices = await response.json();
+                const buttonsContainer = document.getElementById('deviceButtons');
+                
+                if (devices.length === 0) {
+                    buttonsContainer.innerHTML = '<p style="color: #6c757d;">No devices found. Install and run the app first.</p>';
+                    return;
+                }
+                
+                buttonsContainer.innerHTML = '';
+                devices.forEach(device => {
+                    const btn = document.createElement('button');
+                    btn.className = 'device-btn';
+                    btn.textContent = `📱 ${device.deviceId} (${device.count} entries)`;
+                    btn.onclick = () => selectDevice(device.deviceId, btn);
+                    buttonsContainer.appendChild(btn);
+                });
+                
+                // Auto-select first device
+                if (devices.length > 0) {
+                    selectDevice(devices[0].deviceId, buttonsContainer.firstChild);
+                }
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                document.getElementById('deviceButtons').innerHTML = '<p style="color: #dc3545;">Error loading devices</p>';
+            }
+        }
+
+        function selectDevice(deviceId, btnElement) {
+            selectedDevice = deviceId;
+            
+            // Update button states
+            document.querySelectorAll('.device-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            
+            loadNotifications();
+        }
+
+        async function loadNotifications() {
+            if (!selectedDevice) {
+                document.getElementById('notificationsContainer').innerHTML = '<p>Please select a device first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/device/${selectedDevice}`);
+                const data = await response.json();
+                
+                if (!data || !data.notifications) {
+                    document.getElementById('notificationsContainer').innerHTML = '<p>No notification data found for this device.</p>';
+                    return;
+                }
+
+                displayNotifications(data.notifications);
+                updateStats(data.notifications);
+                
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+                document.getElementById('notificationsContainer').innerHTML = '<p style="color: #dc3545;">Error loading notification data</p>';
+            }
+        }
+
+        function displayNotifications(notifications) {
+            const container = document.getElementById('notificationsContainer');
+            
+            if (!notifications || notifications.length === 0) {
+                container.innerHTML = '<p>No notifications captured yet. Make sure the app has notification access enabled.</p>';
+                return;
+            }
+
+            // Sort notifications by timestamp (newest first)
+            const sortedNotifications = notifications.sort((a, b) => b.timestamp - a.timestamp);
+
+            container.innerHTML = sortedNotifications.map(notification => {
+                const appClass = getAppClass(notification.packageName);
+                
+                return `
+                    <div class="notification-card ${appClass}">
+                        <div class="notification-header">
+                            <div class="app-name">${notification.appName || 'Unknown App'}</div>
+                            <div class="time">${notification.time || new Date(notification.timestamp).toLocaleTimeString()}</div>
+                        </div>
+                        <div class="notification-content">
+                            <div class="title">${notification.title || 'No title'}</div>
+                            <div class="text">${notification.text || notification.messageContent || 'No content'}</div>
+                        </div>
+                        <div class="notification-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Package:</span> 
+                                <span class="detail-value">${notification.packageName}</span>
+                            </div>
+                            ${notification.sender ? `<div class="detail-row"><span class="detail-label">Sender:</span> <span class="detail-value">${notification.sender}</span></div>` : ''}
+                            ${notification.groupName ? `<div class="detail-row"><span class="detail-label">Group:</span> <span class="detail-value">${notification.groupName}</span></div>` : ''}
+                            ${notification.messageType ? `<div class="detail-row"><span class="detail-label">Type:</span> <span class="detail-value">${notification.messageType}</span></div>` : ''}
+                            ${notification.conversationTitle ? `<div class="detail-row"><span class="detail-label">Conversation:</span> <span class="detail-value">${notification.conversationTitle}</span></div>` : ''}
+                            <div class="detail-row">
+                                <span class="detail-label">Timestamp:</span> 
+                                <span class="detail-value">${new Date(notification.timestamp).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('notificationCount').textContent = `📊 ${notifications.length} notifications captured`;
+        }
+
+        function getAppClass(packageName) {
+            if (packageName.includes('whatsapp')) return 'whatsapp';
+            if (packageName.includes('instagram')) return 'instagram';
+            if (packageName.includes('facebook.orca')) return 'messenger';
+            if (packageName.includes('facebook')) return 'facebook';
+            if (packageName.includes('telegram')) return 'telegram';
+            if (packageName.includes('discord')) return 'discord';
+            if (packageName.includes('snapchat')) return 'snapchat';
+            if (packageName.includes('mms') || packageName.includes('messaging')) return 'sms';
+            return 'other';
+        }
+
+        function updateStats(notifications) {
+            const stats = document.getElementById('stats');
+            const appCounts = {};
+            
+            notifications.forEach(notification => {
+                const appName = notification.appName || 'Unknown';
+                appCounts[appName] = (appCounts[appName] || 0) + 1;
+            });
+
+            const totalNotifications = notifications.length;
+            const uniqueApps = Object.keys(appCounts).length;
+            
+            const topApps = Object.entries(appCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([app, count]) => `${app}: ${count}`)
+                .join(' | ');
+
+            stats.innerHTML = `
+                <p>📊 Total: ${totalNotifications} notifications from ${uniqueApps} apps</p>
+                <p>🔝 Top apps: ${topApps}</p>
+            `;
+        }
+
+        function toggleAutoRefresh() {
+            isAutoRefresh = !isAutoRefresh;
+            const statusSpan = document.getElementById('autoStatus');
+            
+            if (isAutoRefresh) {
+                statusSpan.textContent = 'ON';
+                autoRefreshInterval = setInterval(loadNotifications, 5000); // Refresh every 5 seconds
+            } else {
+                statusSpan.textContent = 'OFF';
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        }
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDevices();
+        });
+
+        // Auto-refresh every 30 seconds if no manual refresh in that time
+        let lastRefreshTime = Date.now();
+        setInterval(() => {
+            if (Date.now() - lastRefreshTime > 30000 && selectedDevice) {
+                loadNotifications();
+                lastRefreshTime = Date.now();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

